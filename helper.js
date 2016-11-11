@@ -71,8 +71,8 @@ function checkRequiredFields(config) {
   }
 
   if(! config.billingEmail) {
-    errors.push("Access Code is required");
-    console.log("Access Code is required");
+    errors.push("Billing Email is required");
+    console.log("Billing Email is required");
   }
 
   return errors;
