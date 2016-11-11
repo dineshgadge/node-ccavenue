@@ -1,119 +1,86 @@
 var crypto = require('crypto'), algorithm = 'aes-128-cbc';
+var qs = require('querystring')
 
-function decrypt(text, workingKey){
-    var decipher = crypto.createDecipher(algorithm, workingKey);
-    var dec = decipher.update(text,'hex','utf8')
-    dec += decipher.final('utf8');
-
-    return dec;
+function decrypt(encText, workingKey){
+  var m = crypto.createHash('md5');
+  m.update(workingKey)
+  var key = m.digest('binary');
+  var iv = '\x00\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f';  
+  var decipher = crypto.createDecipheriv(algorithm, key, iv);
+  var decoded = decipher.update(encText,'hex','utf8');
+  decoded += decipher.final('utf8');
+  return decoded;
 }
 
-function getCheckSum(MerchantId, Amount, OrderId , URL, WorkingKey)
+function encrypt(merchantId, billingEmail, amount, orderId, redirectUrl, workingKey)
 {
-    var str = MerchantId + "|" + OrderId + "|" + Amount + "|" + URL + "|" + WorkingKey;
-    var adler = 1;
-    adler = adler32(adler, str);
+  var qsObject = {
+    merchant_id: merchantId,
+    billing_email: billingEmail,
+    order_id: orderId,
+    billing_tel: null,
+    currency: 'INR',
+    amount: amount,
+    redirect_url: redirectUrl,
+    cancel_url: redirectUrl,
+    language: "EN"
+  };
+  var plainText = qs.stringify(qsObject);
 
-    return adler;
+  var m = crypto.createHash('md5');
+  m.update(workingKey);
+  var key = m.digest('binary');
+  var iv = '\x00\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f';  
+  var cipher = crypto.createCipheriv(algorithm, key, iv);
+  var encoded = cipher.update(plainText,'utf8','hex');
+  encoded += cipher.final('hex');
+  return encoded;
 }
 
-function genChecksum(str)
-{
-    var adler = 1;
-    adler = adler32(adler,str);
-    
-    return adler;
-}
+function checkRequiredFields(config) {
+  var errors = [];
 
-function verifyChecksum(getCheck, avnChecksum)
-{
-    var verify=false;
-    if(getCheck == avnChecksum) verify=true;
-    
-    return verify;
-}
+  if(! config.merchantId) {
+    errors.push("Merchant Id is required");
+    console.log("Merchant Id is required");
+  }
 
-function adler32(adler , str)
-{
-    var BASE =  65521 ;
-    var s1 = adler & 0xffff ;
-    var s2 = (adler >> 16) & 0xffff;
-    
-    for(var i = 0 ; i < str.length ; i++)
-    {
-        s1 = (s1 + str[i].charCodeAt(0)) % BASE ;
-        s2 = (s2 + s1) % BASE ;
-    }
-    
-    return leftshift(s2 , 16) + s1;
-}
+  if(! config.workingKey) {
+    errors.push("Working Key is required");
+    console.log("Working Key is required");
+  }
 
-function leftshift(str , num)
-{
-    var str = (+str).toString(2);
-    var l = 64 - str.length;
-    for( var i = 0 ; i < l ; i++)
-    {
-				str = "0" + str ;
-		}
+  if(! config.orderId) {
+    errors.push("Order Id is required");
+    console.log("Order Id is required");
+  }
 
-    for(var i = 0 ; i < num ; i++)
-    {
-                str = str + "0";
-                str = str.substr(1) ;
-   }
-    
-   return cdec(str) ;
-}
+  if(! config.redirectUrl) {
+    errors.push("Redirect Url is required");
+    console.log("Redirect Url is required");
+  }
 
-function cdec(num)
-{
-    var dec = 0;
-    for (var n = 0 ; n < num.length ; n++)
-    {
-       var temp = num[n] ;
-       dec =  dec + temp * Math.pow(2 , num.length - n - 1);
-    }
-    
-    return dec;
-}
+  if(! config.orderAmount) {
+    errors.push("Order Amount is required");
+    console.log("Order Amount is required");
+  }
 
-function checkRequiredField(config) {
-    var errors = [];
+  if(! config.accessCode) {
+    errors.push("Access Code is required");
+    console.log("Access Code is required");
+  }
 
-    if(! config.merchantId) {
-      errors.push("Merchant Id is required");
-      console.log("Merchant Id is required");
-    }
-    
-    if(! config.workingKey) {
-      errors.push("Working Key is required");
-      console.log("Working Key is required");
-    }
-    
-    if(! config.orderId) {
-      errors.push("Order Id is required");
-      console.log("Order Id is required");
-    }
-    
-    if(! config.redirectUrl) {
-      errors.push("Redirect Url is required");
-      console.log("Redirect Url is required");
-    }
+  if(! config.billingEmail) {
+    errors.push("Access Code is required");
+    console.log("Access Code is required");
+  }
 
-    if(! config.orderAmount) {
-      errors.push("Order Amount is required");
-      console.log("Order Amount is required");
-    }
-
-    return errors;
+  return errors;
 }
 
 
 module.exports = {
-    getCheckSum: getCheckSum,
-    verifyChecksum: verifyChecksum,
-    genChecksum: genChecksum,
-    decrypt: decrypt,
-    checkRequiredField: checkRequiredField
+  encrypt: encrypt,
+  decrypt: decrypt,
+  checkRequiredFields: checkRequiredFields
 };

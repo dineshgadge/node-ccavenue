@@ -17,6 +17,9 @@ function setMerchant(mid) {
 function setWorkingKey(wk) {
 	config.workingKey = wk;
 }
+function setAccessCode(ac) {
+  config.accessCode = ac;
+}
 function setOrderId(oi) {
 	config.orderId = oi;
 }
@@ -26,68 +29,69 @@ function setRedirectUrl(ru) {
 function setOrderAmount(oa) {
 	config.orderAmount = oa;
 }
-
-function setOtherParams(obj) {
-	otherParams = obj;
+function setBillingEmail(be) {
+  config.billingEmail = be;
 }
 
+// function setOtherParams(obj) {
+// 	otherParams = obj;
+// }
+
 function makePayment(res) {
-	var errors = helper.checkRequiredField(config);
+	var errors = helper.checkRequiredFields(config);
 	if(errors.length > 0) {
 		throw new Error(errors);	
 	}
 
-	var Checksum = helper.getCheckSum(config.merchantId, config.orderAmount, config.orderId, config.redirectUrl, config.workingKey); //This function is to verify 
+	var encRequest = helper.encrypt(config.merchantId, config.billingEmail, config.orderAmount, config.orderId, config.redirectUrl, config.workingKey);
       
-  	var body = "<form method='post' name='checkout' id='checkout' action='https://www.ccavenue.com/shopzone/cc_details.jsp'>" +
-          "<input type=hidden name='Merchant_Id' value='" + config.merchantId + "'>" +
-          "<input type=hidden name='Amount' value='" + config.orderAmount + "'>" +
-          "<input type=hidden name='Order_Id' value='" + config.orderId + "'>" +
-          "<input type=hidden name='Redirect_Url' value='" + config.redirectUrl +"'>" +
-          "<input type=hidden name='Checksum' value='" + Checksum + "'>" +
-          "<input type=hidden name='TxnType' value='A'>" +
-          "<input type=hidden name='ActionID' value='TXN'>";
+  var body =  "<form id='nonseamless' method='post' name='redirect' action='https://secure.ccavenue.com/transaction/transaction.do?command=initiateTransaction'>" +
+              "<input type='hidden' id='encRequest' name='encRequest' value='" + encRequest + "'>" + 
+              "<input type='hidden' name='access_code' id='access_code' value='" + config.accessCode + "' >" + 
 
-          for(var key in otherParams) {
-          		body += "<input type=hidden name='"+ key +"' value='" + otherParams[key] + "'>";
-          }
+  // for(var key in otherParams) {
+  // 		body += "<input type=hidden name='"+ key +"' value='" + otherParams[key] + "'>";
+  // }
 
-          body += "</form><script type='text/javascript'>" +
-	          "document.getElementById('checkout').submit();" +
-	      "</script>";
+  body += "</form>" + 
+          "<script type='text/javascript'>" +
+	          "document.getElementById('redirect').submit();" +
+	        "</script>";
 
-  	res.writeHead(200, {
-        'Content-Length': Buffer.byteLength(body),
-        'Content-Type': 'text/html'
-    });
+	res.writeHead(200, {
+    'Content-Length': Buffer.byteLength(body),
+    'Content-Type': 'text/html'
+  });
 
-  	res.write(body);
-  	res.end();
+	res.write(body);
+	res.end();
 }
 
 function paymentRedirect(req) {
 	var body = qs.parse(req.body);
     
-    var ccString = helper.decrypt(body.encResponse, config.workingKey);
-    var ccJson = qs.parse(ccString);
-    
-    ccString = config.merchantId + '|' + ccJson.Order_Id + '|' +
-                 ccJson.Amount + '|' + ccJson.AuthDesc + '|' + config.workingKey;
-    
-    var Checksum = helper.genChecksum(ccString);
-    ccJson.isCheckSumValid = helper.verifyChecksum(Checksum, ccJson.Checksum);
-    
-    return ccJson;
-  }
+  var ccString = helper.decrypt(body.encResponse, config.workingKey);
+  var ccJson = qs.parse(ccString);
+  
+  // ccString = config.merchantId + '|' + ccJson.Order_Id + '|' +
+  //              ccJson.Amount + '|' + ccJson.AuthDesc + '|' + config.workingKey;
+  
+  // var Checksum = helper.genChecksum(ccString);
+  // ccJson.isCheckSumValid = helper.verifyChecksum(Checksum, ccJson.Checksum);
+  
+  return ccJson;
+}
 
 
 module.exports = {
-	setMerchant: setMerchant,
-	setWorkingKey: setWorkingKey,
-	setOrderId: setOrderId,
-	setRedirectUrl: setRedirectUrl,
-	setOrderAmount: setOrderAmount,
-	setOtherParams: setOtherParams,
-	makePayment: makePayment,
-	paymentRedirect: paymentRedirect
+  setMerchant: setMerchant,
+  setWorkingKey: setWorkingKey,
+  setAccessCode: setAccessCode,
+  setOrderId: setOrderId,
+  setRedirectUrl: setRedirectUrl,
+  setOrderAmount: setOrderAmount,
+  // setOtherParams: setOtherParams,
+  setBillingEmail: setBillingEmail,
+  makePayment: makePayment,
+  paymentRedirect: paymentRedirect
 };
