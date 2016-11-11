@@ -70,10 +70,10 @@ function checkRequiredFields(config) {
     console.log("Access Code is required");
   }
 
-  if(! config.billingEmail) {
-    errors.push("Billing Email is required");
-    console.log("Billing Email is required");
-  }
+  // if(! config.billingEmail) {
+  //   errors.push("Billing Email is required");
+  //   console.log("Billing Email is required");
+  // }
 
   return errors;
 }
