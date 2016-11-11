@@ -37,7 +37,7 @@ function setBillingEmail(be) {
 // 	otherParams = obj;
 // }
 
-function makePayment(res) {
+function makePayment() {
 	var errors = helper.checkRequiredFields(config);
 	if(errors.length > 0) {
 		throw new Error(errors);	
@@ -47,31 +47,28 @@ function makePayment(res) {
       
   var body =  "<form id='nonseamless' method='post' name='redirect' action='https://secure.ccavenue.com/transaction/transaction.do?command=initiateTransaction'>" +
               "<input type='hidden' id='encRequest' name='encRequest' value='" + encRequest + "'>" + 
-              "<input type='hidden' name='access_code' id='access_code' value='" + config.accessCode + "' >" + 
+              "<input type='hidden' name='access_code' id='access_code' value='" + config.accessCode + "' >" 
 
   // for(var key in otherParams) {
   // 		body += "<input type=hidden name='"+ key +"' value='" + otherParams[key] + "'>";
   // }
 
-  body += "</form>" + 
-          "<script type='text/javascript'>" +
-	          "document.getElementById('redirect').submit();" +
-	        "</script>";
+  body += "</form>" // + 
+         //  "<script type='text/javascript'>" +
+	        //   "document.getElementById('redirect').submit();" +
+	        // "</script>";
 
-	res.writeHead(200, {
-    'Content-Length': Buffer.byteLength(body),
-    'Content-Type': 'text/html'
-  });
-
-	res.write(body);
-	res.end();
+	return {formBody: body, config: config}
 }
 
 function paymentRedirect(req) {
-	var body = qs.parse(req.body);
+	var body = req.body;
     
-  var ccString = helper.decrypt(body.encResponse, config.workingKey);
+  var ccString = helper.decrypt(body.encResp, config.workingKey);
   var ccJson = qs.parse(ccString);
+
+  console.log("ccString:", ccString);
+  console.log("ccJson:", ccJson);
   
   // ccString = config.merchantId + '|' + ccJson.Order_Id + '|' +
   //              ccJson.Amount + '|' + ccJson.AuthDesc + '|' + config.workingKey;
